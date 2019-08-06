@@ -1,5 +1,6 @@
 require('./db/mongodb');
 const express = require('express');
+const bodyParser = require('body-parser');
 const chalk = require('chalk');
 const userRouter = require('./routers/user');
 const cvRouter = require('./routers/cv');
@@ -11,7 +12,8 @@ console.log(chalk.yellow(`App is running`));
  * Express
  */
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(userRouter);
 app.use(cvRouter);
 

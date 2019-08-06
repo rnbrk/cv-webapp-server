@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const moment = require('moment');
+
+const User = require('./user');
 
 const defaultTitle = {
   PROFILE: '',
@@ -45,63 +48,70 @@ const courseSchema = new mongoose.Schema({
   type: { type: String, default: '' }
 });
 
-const cvSchema = new mongoose.Schema({
-  owner: {
-    type: String
-    // required: true
-    // Validate that the owner should exist?
-  },
-  profile: {
+const cvSchema = new mongoose.Schema(
+  {
     title: {
       type: String,
-      default: defaultTitle.PROFILE
+      default: `CV ${moment().format('DD-MM-YYYY H:mm')}`
     },
-    paragraph: {
-      type: String,
-      default: ''
+    user: {
+      type: mongoose.Types.ObjectId,
+      ref: User,
+      required: true
+    },
+    profile: {
+      title: {
+        type: String,
+        default: defaultTitle.PROFILE
+      },
+      paragraph: {
+        type: String,
+        default: ''
+      }
+    },
+    skills: {
+      title: {
+        type: String,
+        default: defaultTitle.SKILLS
+      },
+      paragraph: {
+        type: String
+      },
+      list: [skillSchema]
+    },
+    jobs: {
+      title: {
+        type: String,
+        default: defaultTitle.JOBS
+      },
+      paragraph: {
+        type: String
+      },
+      list: [jobSchema]
+    },
+    studies: {
+      title: {
+        type: String,
+        default: defaultTitle.STUDIES
+      },
+      paragraph: {
+        type: String
+      },
+      list: [studySchema]
+    },
+    courses: {
+      title: {
+        type: String,
+        default: defaultTitle.COURSES
+      },
+      paragraph: {
+        type: String
+      },
+      list: [courseSchema]
     }
   },
-  skills: {
-    title: {
-      type: String,
-      default: defaultTitle.SKILLS
-    },
-    paragraph: {
-      type: String
-    },
-    list: [skillSchema]
-  },
-  jobs: {
-    title: {
-      type: String,
-      default: defaultTitle.JOBS
-    },
-    paragraph: {
-      type: String
-    },
-    list: [jobSchema]
-  },
-  studies: {
-    title: {
-      type: String,
-      default: defaultTitle.STUDIES
-    },
-    paragraph: {
-      type: String
-    },
-    list: [studySchema]
-  },
-  courses: {
-    title: {
-      type: String,
-      default: defaultTitle.COURSES
-    },
-    paragraph: {
-      type: String
-    },
-    list: [courseSchema]
-  }
-});
+  { strict: 'throw' }
+);
 
 const CV = mongoose.model('CV', cvSchema);
 
