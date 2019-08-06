@@ -6,7 +6,7 @@
   "scripts": {
     "test": "env-cmd -f env/test.env jest",
     "db": "/home/ron/mongodb/bin/mongod --dbpath=/home/ron/mongodb-data",
-    "dev": "env-cmd -f env/dev.env nodemon src/app.js"
+    "dev": "env-cmd -f env/dev.env nodemon src/index.js"
   },
   "jest": {
     "testEnvironment": "node"
