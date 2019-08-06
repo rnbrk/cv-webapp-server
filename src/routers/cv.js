@@ -1,8 +1,13 @@
 const express = require('express');
+
+const auth = require('../middleware/auth');
 const CV = require('../models/cv');
 
 const router = express.Router();
 
+/**
+ * Display cv
+ */
 router.get('/cvs/:id', async (req, res) => {
   try {
     const cv = await CV.findById(req.params.id);
@@ -12,9 +17,12 @@ router.get('/cvs/:id', async (req, res) => {
   }
 });
 
-router.post('/cvs', async (req, res) => {
+/**
+ * Create new cv
+ */
+router.post('/cvs', auth, async (req, res) => {
   try {
-    const cv = new CV({ user: '5d495976f97ef72636759389' });
+    const cv = new CV({ user: req.user._id });
     await cv.save();
     res.send(cv);
   } catch (e) {
@@ -22,14 +30,15 @@ router.post('/cvs', async (req, res) => {
   }
 });
 
-router.delete('/cvs/:id', async (req, res) => {
+/**
+ * Delete cv
+ */
+router.delete('/cvs/:id', auth, async (req, res) => {
   try {
-    const result = await CV.deleteOne({ _id: req.params.id });
-
-    if (result.deletedCount !== 1) {
-      res.status(400).send({ error: `Could not delete cv.` });
-    }
-
+    await CV.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user._id
+    });
     res.send();
   } catch (e) {
     res.status(500).send({
@@ -38,21 +47,28 @@ router.delete('/cvs/:id', async (req, res) => {
   }
 });
 
-router.patch('/cvs/:id', async (req, res) => {
+/**
+ * Update cv
+ */
+router.patch('/cvs/:id', auth, async (req, res) => {
   try {
     const updates = Object.keys(req.body);
-    const cv = await CV.findById(req.params.id);
 
+    const query = {
+      _id: req.params.id,
+      user: req.user._id
+    };
+
+    const cv = await CV.findOne(query);
     if (!cv) {
       return res.status(400).send({ error: 'Could not update cv.' });
     }
-    console.log(req.body);
+
     updates.forEach(update => {
-      console.log(req.body[update]);
       cv[update] = req.body[update];
     });
-    await cv.save();
-    res.send(cv);
+    const newCv = await cv.save();
+    res.send(newCv);
   } catch (e) {
     res.status(500).send();
   }
