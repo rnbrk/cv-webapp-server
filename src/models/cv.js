@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const moment = require('moment');
 
-const User = require('./user');
+const { User } = require('./user');
 
 const defaultTitle = {
   PROFILE: '',
@@ -35,17 +35,15 @@ const jobSchema = new mongoose.Schema({
 
 const studySchema = new mongoose.Schema({
   name: { type: String, default: '' },
-  startDate: { type: Date, default: new Date() },
-  endDate: { type: Date, default: new Date() },
+  startDate: { type: Date },
+  endDate: { type: Date },
   instituteName: { type: String, default: '' },
-  type: { type: String, default: '' },
   title: { type: String }
 });
 
 const courseSchema = new mongoose.Schema({
   name: { type: String, default: '' },
-  instituteName: { type: String, default: '' },
-  type: { type: String, default: '' }
+  instituteName: { type: String, default: '' }
 });
 
 const cvSchema = new mongoose.Schema(
@@ -115,4 +113,4 @@ const cvSchema = new mongoose.Schema(
 
 const CV = mongoose.model('CV', cvSchema);
 
-module.exports = CV;
+module.exports = { CV };

@@ -1,7 +1,8 @@
 const express = require('express');
 
 const auth = require('../middleware/auth');
-const CV = require('../models/cv');
+const { CV } = require('../models/cv');
+const { cvRouterError } = require('../errorMessages/error');
 
 const router = express.Router();
 
@@ -13,7 +14,9 @@ router.get('/cvs/:id', async (req, res) => {
     const cv = await CV.findById(req.params.id);
     res.send(cv);
   } catch (e) {
-    res.status(400).send(e);
+    res.status(404).send({
+      error: cvRouterError.NOT_FOUND
+    });
   }
 });
 

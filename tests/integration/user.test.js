@@ -1,19 +1,356 @@
+const bcrypt = require('bcryptjs');
 const request = require('supertest');
-const User = require('../../src/models/user');
-const {
-  userOneId,
-  userOne,
-  userTwoId,
-  userTwo,
-  userOneCvOne,
-  userTwoCvOne,
-  userTwoCvTwo,
-  allCvsOfUserOne,
-  allCvsOfUserTwo,
-  setupDatabase
-} = require('../fixtures/mongodb');
-const app = require('../../src/app');
+const validator = require('validator');
 
-beforeEach(() => {
-  setupDatabase();
+const { User } = require('../../src/models/user');
+const { CV } = require('../../src/models/cv');
+const app = require('../../src/app');
+const { userRouterError, authError } = require('../../src/errorMessages/error');
+const { userOne, userTwo, setupDatabase } = require('../fixtures/mongodb');
+
+beforeEach(setupDatabase);
+
+describe('Create new user (POST /users)', () => {
+  let payload;
+
+  beforeEach(() => {
+    payload = { email: 'ron@web.dev', password: 'Flarlar12!' };
+  });
+
+  it('Should create new user when given correct credentials', async () => {
+    const response = await request(app)
+      .post('/users')
+      .send(payload)
+      .expect(201);
+
+    // It should supply a JWT token
+    expect(validator.isJWT(response.body.token)).toBe(true);
+
+    const user = await User.findOne({ email: payload.email });
+    expect(user).not.toBeNull();
+
+    expect(response.body).toMatchObject({
+      user: { email: payload.email },
+      token: user.tokens[0].token
+    });
+  });
+
+  it('Should not create new user when given incorrect email address', async () => {
+    payload.email = 'wrong@email';
+
+    const response = await request(app)
+      .post('/users')
+      .send(payload)
+      .expect(400);
+
+    const user = await User.findOne({ email: payload.email });
+    expect(user).toBeNull();
+
+    // Should get correct error message
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_USER_DATA
+    });
+  });
+
+  it('Should not create new user when given password with < 8 characters', async () => {
+    payload.password = 'a';
+
+    const response = await request(app)
+      .post('/users')
+      .send(payload)
+      .expect(400);
+
+    const user = await User.findOne({ email: payload.email });
+    expect(user).toBeNull();
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_USER_DATA
+    });
+  });
+
+  it('Should not create new user when email address already exists', async () => {
+    payload.email = userOne.email;
+
+    const response = await request(app)
+      .post('/users')
+      .send(payload)
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.DUPLICATE_USER
+    });
+  });
+
+  it('Should not create new user when not supplied a payload', async () => {
+    const response = await request(app)
+      .post('/users')
+      .send()
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_USER_DATA
+    });
+  });
+});
+
+describe('Login user (POST /users/login)', () => {
+  it('Should log in when given correct credentials', async () => {
+    const payload = { email: userOne.email, password: userOne.password };
+    const response = await request(app)
+      .post('/users/login')
+      .send(payload)
+      .expect(200);
+
+    expect(response.body.password).toBeUndefined();
+
+    const user = await User.findOne({ email: payload.email });
+    expect(user).not.toBeNull();
+
+    expect(response.body).toMatchObject({
+      user: { email: payload.email },
+      token: user.tokens[1].token
+    });
+  });
+
+  it('Should not log in when given email address does not exist', async () => {
+    const payload = { email: 'doesnot@exist.com', password: userOne.password };
+    const response = await request(app)
+      .post('/users/login')
+      .send(payload)
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_CREDENTIALS
+    });
+  });
+
+  it('Should not log in when password is incorrect', async () => {
+    const payload = { email: userOne.email, password: 'wrongpassword123' };
+    const response = await request(app)
+      .post('/users/login')
+      .send(payload)
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_CREDENTIALS
+    });
+  });
+
+  it('Should not log in when given no payload', async () => {
+    const response = await request(app)
+      .post('/users/login')
+      .send()
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_CREDENTIALS
+    });
+  });
+});
+
+describe('Logout user (POST /users/logout)', () => {
+  it('Should logout user when authorized', async () => {
+    await request(app)
+      .post('/users/logout')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send()
+      .expect(200);
+
+    const user = await User.findById(userOne._id);
+
+    // Check if token is deleted
+    expect(user.tokens.length).toBe(userOne.tokens.length - 1);
+  });
+
+  it('Should not logout user when unauthorized', async () => {
+    const response = await request(app)
+      .post('/users/logout')
+      .send()
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+});
+
+describe('Logout all users (POST /users/logoutAll)', () => {
+  it('Should logout all users when authorized', async () => {
+    await request(app)
+      .post('/users/logout')
+      .set('Authorization', `Bearer ${userTwo.tokens[0].token}`)
+      .send()
+      .expect(200);
+
+    // Using userTwo, because it has TWO tokens
+    const user = await User.findById(userTwo._id);
+
+    // Check if all tokens are deleted
+    expect(user.tokens.length).toBe(0);
+  });
+
+  it('Should not logout all users when unauthorized', async () => {
+    const response = await request(app)
+      .post('/users/logoutAll')
+      .send()
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+});
+
+describe('Display user (GET /users)', () => {
+  it('Should correctly send back user data', async () => {
+    const response = await request(app)
+      .get(`/users/${userOne._id}`)
+      .send()
+      .expect(200);
+
+    // response should contain correct data
+    expect(response.body).toMatchObject({
+      firstName: userOne.firstName,
+      lastName: userOne.lastName,
+      email: userOne.email
+    });
+
+    // response should not contain sensitive data
+    expect(response.body.password).toBeUndefined();
+    expect(response.body.tokens).toBeUndefined();
+
+    // Null defaults should not be sent
+    expect(response.body.phoneNumber).toBeUndefined();
+  });
+
+  it('Should should send correct error message when user does not exist', async () => {
+    const response = await request(app)
+      .get(`/users/123doesnotexist`)
+      .send()
+      .expect(404);
+
+    expect(response.body).toMatchObject({ error: userRouterError.NOT_FOUND });
+  });
+});
+
+describe('Delete user (DELETE /users)', () => {
+  it('Should delete user when authorized', async () => {
+    await request(app)
+      .delete('/users')
+      .set('Authorization', `Bearer ${userTwo.tokens[0].token}`)
+      .send()
+      .expect(200);
+
+    // User should be deleted
+    const user = await User.findById(userTwo._id);
+    expect(user).toBeNull();
+
+    // All CVs should be deleted
+    const cvsFromUser = await CV.find({ user: userTwo._id });
+    expect(cvsFromUser.length).toBe(0);
+  });
+
+  it('Should send correct error when unauthorized', async () => {
+    const response = await request(app)
+      .delete('/users')
+      .send()
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+});
+
+describe('Update user (PATCH /users)', () => {
+  it('Should apply updates correctly', async () => {
+    const updatesWithoutPassword = {
+      firstName: 'Test',
+      lastName: 'Subject',
+      phoneNumber: '1234567890',
+      email: 'test@test.nl'
+    };
+
+    const password = 'nUwpaZzwuRt587$';
+
+    const response = await request(app)
+      .patch('/users')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send({ ...updatesWithoutPassword, password });
+
+    // Response should contain correct data
+    expect(response.body).toMatchObject(updatesWithoutPassword);
+
+    // Response should not contain sensitive data
+    expect(response.body.password).toBeUndefined();
+    expect(response.body.tokens).toBeUndefined();
+
+    // Check database if updates are correctly applied
+    const user = await User.findById(userOne._id);
+    expect(user).toMatchObject(updatesWithoutPassword);
+
+    // Check if password is correctly updated
+    const passwordHasMatched = await bcrypt.compare(password, user.password);
+    expect(passwordHasMatched).toBe(true);
+  });
+
+  it('Should not apply updates when unauthenticated', async () => {
+    const updates = {
+      firstName: 'Test',
+      lastName: 'Subject'
+    };
+
+    const response = await request(app)
+      .patch('/users')
+      .send(updates)
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+
+  it('Should not apply unallowed updates', async () => {
+    const unallowedUpdates = {
+      favoriteColor: 'Red',
+      height: 180,
+      lovesKittens: true
+    };
+
+    const response = await request(app)
+      .patch('/users')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(unallowedUpdates)
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_UPDATES
+    });
+  });
+
+  it('Should update dateOfBirth', async () => {
+    const update = { dateOfBirth: -6106024800000 };
+
+    const response = await request(app)
+      .patch('/users')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(update)
+      .expect(200);
+
+    const expectedResponse = {
+      ...userOne,
+      dateOfBirth: new Date(update.dateOfBirth).toISOString(),
+      _id: userOne._id.toString()
+    };
+    delete expectedResponse.password;
+    delete expectedResponse.tokens;
+
+    expect(response.body).toMatchObject(expectedResponse);
+  });
+
+  it('Should not apply updated email to one from another user', async () => {
+    const update = { email: userTwo.email };
+
+    const response = await request(app)
+      .patch('/users')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(update)
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      error: userRouterError.INVALID_UPDATES
+    });
+  });
 });

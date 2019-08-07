@@ -3,8 +3,6 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const validator = require('validator');
 
-// const CV = require('./cv');
-
 const userSchema = new mongoose.Schema(
   {
     firstName: {
@@ -85,8 +83,33 @@ userSchema.methods.createAuthToken = async function() {
   const user = this;
   const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET);
   user.tokens.push({ token });
-  user.save();
+  await user.save();
   return token;
+};
+
+/**
+ * Removes private data and avatar from the userObject
+ * before it gets converted to JSON and sent back to the client in the response
+ * @method toJSON
+ * @returns {object} - Cleaned up user data
+ */
+userSchema.methods.toJSON = function() {
+  const user = this;
+
+  const userObject = user.toObject();
+  delete userObject.password;
+  delete userObject.tokens;
+  delete userObject.photo;
+  delete userObject.id;
+
+  const keys = Object.keys(userObject);
+  keys.forEach(key => {
+    if (userObject[key] === null) {
+      delete userObject[key];
+    }
+  });
+
+  return userObject;
 };
 
 /**
@@ -106,7 +129,7 @@ userSchema.pre('save', async function(next) {
  * Finds user by email address, then checks plain text password with hashed stored password
  */
 userSchema.statics.findAndCheckCredentials = async (email, password) => {
-  const user = await User.findOne({ email: email });
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new Error('User cannot be authenticated');
@@ -121,6 +144,14 @@ userSchema.statics.findAndCheckCredentials = async (email, password) => {
   return user;
 };
 
+/**
+ * Returns true if a user with the email address already exists, false otherwise
+ */
+userSchema.statics.alreadyExists = async email => {
+  const user = await User.findOne({ email });
+  return !!user;
+};
+
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;
+module.exports = { User };

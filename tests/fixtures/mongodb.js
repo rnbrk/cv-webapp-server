@@ -1,14 +1,16 @@
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
-const User = require('../../src/models/user');
-const CV = require('../../src/models/cv');
+const { User } = require('../../src/models/user');
+const { CV } = require('../../src/models/cv');
 
 const userOneId = new mongoose.Types.ObjectId();
 const userOne = {
   _id: userOneId,
-  name: 'Henk',
+  firstName: 'Henk',
+  lastName: 'Supertest',
   email: 'henk@supertest.com',
+  residence: 'Super City',
   password: '343what!',
   tokens: [
     {
@@ -20,19 +22,23 @@ const userOne = {
 const userTwoId = new mongoose.Types.ObjectId();
 const userTwo = {
   _id: userTwoId,
-  name: 'Ellen',
   email: 'ellen@example.com',
   password: 'theMatrix1999@#',
   tokens: [
+    {
+      token: jwt.sign({ _id: userTwoId }, process.env.JWT_SECRET)
+    },
     {
       token: jwt.sign({ _id: userTwoId }, process.env.JWT_SECRET)
     }
   ]
 };
 const userOneCvOne = {
-  user: userOne._id,
+  _id: mongoose.Types.ObjectId().toHexString(),
+  user: userOne._id.toHexString(),
+  title: userOne.email,
   profile: {
-    title: `Mijn CV (${userTwo.name})`,
+    title: `Mijn CV`,
     paragraph: `Lorem ipsum dolor sit amet,
     consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
     Et ligula ullamcorper malesuada proin libero.`
@@ -41,14 +47,34 @@ const userOneCvOne = {
     title: 'Vaardigheden',
     paragraph: '',
     list: [
-      { name: 'JavaScript', rating: 5 },
-      { name: 'React', rating: 5 },
-      { name: 'SCSS', rating: 4 },
-      { name: 'Redux', rating: 5 },
-      { name: 'Node', rating: 2 },
-      { name: 'Python', rating: 2 },
-      { name: 'Git', rating: 2 },
-      { name: 'Photoshop', rating: 5 }
+      {
+        _id: mongoose.Types.ObjectId().toHexString(),
+        name: 'JavaScript',
+        rating: 5
+      },
+      {
+        _id: mongoose.Types.ObjectId().toHexString(),
+        name: 'React',
+        rating: 5
+      },
+      { _id: mongoose.Types.ObjectId().toHexString(), name: 'SCSS', rating: 4 },
+      {
+        _id: mongoose.Types.ObjectId().toHexString(),
+        name: 'Redux',
+        rating: 5
+      },
+      { _id: mongoose.Types.ObjectId().toHexString(), name: 'Node', rating: 2 },
+      {
+        _id: mongoose.Types.ObjectId().toHexString(),
+        name: 'Python',
+        rating: 2
+      },
+      { _id: mongoose.Types.ObjectId().toHexString(), name: 'Git', rating: 2 },
+      {
+        _id: mongoose.Types.ObjectId().toHexString(),
+        name: 'Photoshop',
+        rating: 5
+      }
     ]
   },
   jobs: {
@@ -56,9 +82,9 @@ const userOneCvOne = {
     paragraph: '',
     list: [
       {
-        jobTitle: 'Excepteur sint occaecat cupidatat ',
-        startDate: 0,
-        endDate: 0,
+        name: 'Excepteur sint occaecat cupidatat ',
+        startDate: '1970-01-01T00:00:00.000Z',
+        endDate: '1970-01-01T00:00:00.000Z',
         description:
           'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
         responsibilities: [
@@ -74,18 +100,18 @@ const userOneCvOne = {
     paragraph: '',
     list: [
       {
+        _id: mongoose.Types.ObjectId().toHexString(),
         name: 'Lorem ipsum dolor sit amet',
-        startDate: 0,
-        endDate: 0,
-        institute: 'Universiteit van Amsterdam',
-        diploma: 'BA'
+        startDate: '1970-01-01T00:00:00.000Z',
+        endDate: '1970-01-01T00:00:00.000Z',
+        instituteName: 'Universiteit van Amsterdam',
+        title: 'BA'
       },
       {
+        _id: mongoose.Types.ObjectId().toHexString(),
         name: 'Lorem ipsum dolor sit amet',
-        startDate: 0,
-        endDate: 0,
-        institute: 'Universiteit van Amsterdam',
-        diploma: 'MA'
+        instituteName: 'Universiteit van Amsterdam',
+        title: 'MA'
       }
     ]
   },
@@ -94,21 +120,25 @@ const userOneCvOne = {
     paragraph: '',
     list: [
       {
+        _id: mongoose.Types.ObjectId().toHexString(),
         name: 'Ut enim ad minim veniam',
-        institute: 'Elementum tempus'
+        instituteName: 'Elementum tempus'
       },
       {
+        _id: mongoose.Types.ObjectId().toHexString(),
         name: 'Ut enim ad minim veniam',
-        institute: 'Elementum tempus'
+        instituteName: 'Elementum tempus'
       }
     ]
   }
 };
 
 const userTwoCvOne = {
-  user: userTwo._id,
+  _id: mongoose.Types.ObjectId().toHexString(),
+  user: userTwo._id.toHexString(),
+  title: userTwo.email,
   profile: {
-    title: `Mijn CV (${userOne.name})`,
+    title: `Mijn CV`,
     paragraph: `Lorem ipsum dolor sit amet,
     consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
     Et ligula ullamcorper malesuada proin libero.`
@@ -146,13 +176,13 @@ const setupDatabase = async () => {
   await CV.deleteMany();
 
   // Create User fixtures
-  await new User(userOne);
-  await new User(userTwo);
+  await new User(userOne).save();
+  await new User(userTwo).save();
 
   // Create CV fixtures
-  await new CV(userOneCvOne);
-  await new CV(userTwoCvOne);
-  await new CV(userTwoCvTwo);
+  await new CV(userOneCvOne).save();
+  await new CV(userTwoCvOne).save();
+  await new CV(userTwoCvTwo).save();
 };
 
 module.exports = {

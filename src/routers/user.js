@@ -1,7 +1,11 @@
 const express = require('express');
 
-const User = require('../models/user');
+const { User } = require('../models/user');
+const { CV } = require('../models/cv');
+
 const auth = require('../middleware/auth');
+
+const { userRouterError } = require('../errorMessages/error');
 
 const router = express.Router();
 
@@ -9,12 +13,21 @@ const router = express.Router();
  * Create new user
  */
 router.post('/users', async (req, res) => {
-  const user = new User(req.body);
   try {
+    const userAlreadyExists = await User.alreadyExists(req.body.email);
+    if (userAlreadyExists) {
+      return res.status(400).send({
+        error: userRouterError.DUPLICATE_USER
+      });
+    }
+
+    const user = await new User(req.body);
     const token = await user.createAuthToken();
     res.status(201).send({ token, user });
   } catch (e) {
-    res.status(400).send(e);
+    res.status(400).send({
+      error: userRouterError.INVALID_USER_DATA
+    });
   }
 });
 
@@ -30,7 +43,7 @@ router.post('/users/login', async (req, res) => {
     const token = await user.createAuthToken();
     res.send({ token, user });
   } catch (e) {
-    res.status(400).send({ error: 'User cannot be authenticated' });
+    res.status(400).send({ error: userRouterError.INVALID_CREDENTIALS });
   }
 });
 
@@ -70,9 +83,15 @@ router.get('/users/:id', async (req, res) => {
     const user = await User.findById(req.params.id)
       .populate('cvs', 'title')
       .exec();
+
+    if (!user) {
+      throw new Error();
+    }
     res.send(user);
   } catch (e) {
-    res.status(400).send(e);
+    res.status(404).send({
+      error: userRouterError.NOT_FOUND
+    });
   }
 });
 
@@ -81,11 +100,14 @@ router.get('/users/:id', async (req, res) => {
  */
 router.delete('/users', auth, async (req, res) => {
   try {
+    await CV.deleteMany({ user: req.user._id });
     await req.user.remove();
+
     res.send();
   } catch (e) {
+    console.log(e);
     res.status(500).send({
-      error: 'Internal server error.'
+      error: userRouterError.INTERNAL_SERVER_ERROR
     });
   }
 });
@@ -96,6 +118,12 @@ router.delete('/users', auth, async (req, res) => {
 router.patch('/users', auth, async (req, res) => {
   const updates = Object.keys(req.body);
 
+  if (updates.length === 0) {
+    return res.status(400).send({
+      error: userRouterError.INVALID_UPDATES
+    });
+  }
+
   const allowedUpdates = [
     'firstName',
     'lastName',
@@ -103,8 +131,7 @@ router.patch('/users', auth, async (req, res) => {
     'residence',
     'phoneNumber',
     'email',
-    'password',
-    'photo'
+    'password'
   ];
 
   const isValidOperation = updates.every(update =>
@@ -112,7 +139,7 @@ router.patch('/users', auth, async (req, res) => {
   );
 
   if (!isValidOperation) {
-    return res.status(400).send({ error: 'Invalid updates!' });
+    return res.status(400).send({ error: userRouterError.INVALID_UPDATES });
   }
 
   try {
@@ -120,7 +147,7 @@ router.patch('/users', auth, async (req, res) => {
     await req.user.save();
     res.send(req.user);
   } catch (e) {
-    res.status(400).send(e);
+    res.status(400).send({ error: userRouterError.INVALID_UPDATES });
   }
 });
 
