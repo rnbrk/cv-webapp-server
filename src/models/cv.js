@@ -3,7 +3,7 @@ const moment = require('moment');
 
 const { User } = require('./user');
 
-const defaultTitle = {
+const cvDefaults = {
   PROFILE: '',
   SKILLS: 'Vaardigheden',
   JOBS: 'Werkervaring',
@@ -60,7 +60,7 @@ const cvSchema = new mongoose.Schema(
     profile: {
       title: {
         type: String,
-        default: defaultTitle.PROFILE
+        default: cvDefaults.PROFILE
       },
       paragraph: {
         type: String,
@@ -70,7 +70,7 @@ const cvSchema = new mongoose.Schema(
     skills: {
       title: {
         type: String,
-        default: defaultTitle.SKILLS
+        default: cvDefaults.SKILLS
       },
       paragraph: {
         type: String
@@ -80,7 +80,7 @@ const cvSchema = new mongoose.Schema(
     jobs: {
       title: {
         type: String,
-        default: defaultTitle.JOBS
+        default: cvDefaults.JOBS
       },
       paragraph: {
         type: String
@@ -90,7 +90,7 @@ const cvSchema = new mongoose.Schema(
     studies: {
       title: {
         type: String,
-        default: defaultTitle.STUDIES
+        default: cvDefaults.STUDIES
       },
       paragraph: {
         type: String
@@ -100,7 +100,7 @@ const cvSchema = new mongoose.Schema(
     courses: {
       title: {
         type: String,
-        default: defaultTitle.COURSES
+        default: cvDefaults.COURSES
       },
       paragraph: {
         type: String
@@ -113,4 +113,4 @@ const cvSchema = new mongoose.Schema(
 
 const CV = mongoose.model('CV', cvSchema);
 
-module.exports = { CV };
+module.exports = { CV, cvDefaults };

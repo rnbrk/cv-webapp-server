@@ -38,14 +38,20 @@ router.post('/cvs', auth, async (req, res) => {
  */
 router.delete('/cvs/:id', auth, async (req, res) => {
   try {
-    await CV.findOneAndDelete({
+    const cv = await CV.findOne({
       _id: req.params.id,
       user: req.user._id
     });
+
+    if (!cv) {
+      throw new Error();
+    }
+
+    cv.remove();
     res.send();
   } catch (e) {
-    res.status(500).send({
-      error: 'Internal server error.'
+    res.status(404).send({
+      error: cvRouterError.NOT_FOUND
     });
   }
 });
