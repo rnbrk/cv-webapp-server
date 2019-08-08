@@ -165,6 +165,99 @@ const userTwoCvOne = {
   }
 };
 
+const testUpdates = {
+  title: userOne.email,
+  profile: {
+    title: 'Test-cv',
+    paragraph: 'Dit is een testparagraaf van profile.'
+  },
+  skills: {
+    title: 'Testvaardigheden',
+    paragraph: 'Dit is een testparagraaf van skills.',
+    list: [
+      {
+        name: 'Jest',
+        rating: 5
+      },
+      {
+        name: 'Enzyme',
+        rating: 4
+      },
+      {
+        name: 'Supertest',
+        rating: 3
+      },
+      {
+        name: 'Selenium',
+        rating: 2
+      },
+      {
+        name: 'Crash test dummies',
+        rating: 1
+      }
+    ]
+  },
+  jobs: {
+    title: 'Testwerkervaring',
+    paragraph: 'Dit is een testparagraaf van jobs.',
+    list: [
+      {
+        name: 'Tester',
+        startDate: '2012-01-01T00:00:00.000Z',
+        endDate: '2014-01-01T00:00:00.000Z',
+        description: 'Ik ben de hele dag aan het testen.',
+        responsibilities: ['describe', 'it / test', 'expect']
+      },
+      {
+        name: 'Tester2',
+        startDate: '2014-01-01T00:00:00.000Z',
+        endDate: '2018-01-01T00:00:00.000Z',
+        description: 'Nog meer aan het testen'
+      }
+    ]
+  },
+  studies: {
+    title: 'Testopleiding',
+    paragraph: '',
+    list: [
+      {
+        name: 'Test-bachelor',
+        startDate: '2010-01-01T00:00:00.000Z',
+        endDate: '2014-01-01T00:00:00.000Z',
+        instituteName: 'test-Universiteit van Amsterdam',
+        title: 'test-BA'
+      },
+      {
+        name: 'Test-master',
+        instituteName: 'test-Universiteit van Amsterdam',
+        title: 'test-MA'
+      },
+      {
+        name: 'Test-master2',
+        title: 'test-MA'
+      }
+    ]
+  },
+  courses: {
+    title: 'Testcursussen',
+    paragraph: 'Dit is een testparagraaf van courses.',
+    list: [
+      {
+        name: 'Test-course1',
+        instituteName: 'Test-instituut'
+      },
+      {
+        name: 'Test-course2',
+        instituteName: 'Test-instituut'
+      },
+      {
+        name: 'Test-course3',
+        instituteName: 'Test-instituut2'
+      }
+    ]
+  }
+};
+
 const userTwoCvTwo = { user: userTwo._id };
 
 const allCvsOfUserOne = [userOneCvOne];
@@ -195,5 +288,6 @@ module.exports = {
   userTwoCvTwo,
   allCvsOfUserOne,
   allCvsOfUserTwo,
-  setupDatabase
+  setupDatabase,
+  testUpdates
 };

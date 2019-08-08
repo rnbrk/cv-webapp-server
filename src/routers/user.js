@@ -4,7 +4,7 @@ const { User } = require('../models/user');
 const { CV } = require('../models/cv');
 
 const auth = require('../middleware/auth');
-
+const { arrayContainsItemOfOtherArray } = require('../../src/utils/utils');
 const { userRouterError } = require('../errorMessages/error');
 
 const router = express.Router();
@@ -124,7 +124,7 @@ router.patch('/users', auth, async (req, res) => {
     });
   }
 
-  const allowedUpdates = [
+  const ALLOWED_UPDATES = [
     'firstName',
     'lastName',
     'dateOfBirth',
@@ -134,8 +134,9 @@ router.patch('/users', auth, async (req, res) => {
     'password'
   ];
 
-  const isValidOperation = updates.every(update =>
-    allowedUpdates.includes(update)
+  const isValidOperation = arrayContainsItemOfOtherArray(
+    updates,
+    ALLOWED_UPDATES
   );
 
   if (!isValidOperation) {

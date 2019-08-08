@@ -7,6 +7,7 @@ const { User } = require('../../src/models/user');
 const { CV, cvDefaults } = require('../../src/models/cv');
 const app = require('../../src/app');
 const { cvRouterError, authError } = require('../../src/errorMessages/error');
+const { convertDatesToISOStrings } = require('../../src/utils/utils');
 
 const {
   userOneId,
@@ -18,7 +19,8 @@ const {
   userTwoCvTwo,
   allCvsOfUserOne,
   allCvsOfUserTwo,
-  setupDatabase
+  setupDatabase,
+  testUpdates
 } = require('../fixtures/mongodb');
 
 beforeEach(setupDatabase);
@@ -171,4 +173,129 @@ describe('Delete cv (DELETE /cvs)', () => {
   });
 });
 
-describe()
+describe('Update cv (PATCH /cvs/:id)', () => {
+  it('Should apply updates correctly (profile)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body.profile).toMatchObject(testUpdates.profile);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv.profile)).toMatchObject(
+      testUpdates.profile
+    );
+  });
+
+  it('Should apply updates correctly (skills)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body.skills).toMatchObject(testUpdates.skills);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv.skills)).toMatchObject(
+      testUpdates.skills
+    );
+  });
+
+  it('Should apply updates correctly (jobs)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body.jobs).toMatchObject(testUpdates.jobs);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv.jobs)).toMatchObject(testUpdates.jobs);
+  });
+
+  it('Should apply updates correctly (studies)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body.studies).toMatchObject(testUpdates.studies);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv.studies)).toMatchObject(
+      testUpdates.studies
+    );
+  });
+
+  it('Should apply updates correctly (courses)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body.courses).toMatchObject(testUpdates.courses);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv.courses)).toMatchObject(
+      testUpdates.courses
+    );
+  });
+
+  it('Should apply updates correctly (the rest)', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(200);
+
+    expect(response.body).toMatchObject(testUpdates);
+
+    const cv = await CV.findById(userOneCvOne._id);
+    expect(convertDatesToISOStrings(cv)).toMatchObject(testUpdates);
+  });
+
+  it('Should not apply updates when unauthorized', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userOneCvOne._id}`)
+      .send(testUpdates)
+      .expect(401);
+
+    expect(response.body).toEqual({ error: authError.NOT_AUTHORIZED });
+
+    const cv = await CV.findById(userOneCvOne._id);
+
+    expect(convertDatesToISOStrings(cv)).toMatchObject(userOneCvOne);
+    expect(convertDatesToISOStrings(cv)).not.toMatchObject(testUpdates);
+  });
+
+  it('Should not apply updates on a cv from a different user', async () => {
+    const response = await request(app)
+      .patch(`/cvs/${userTwoCvOne._id}`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(404);
+
+    expect(response.body).toEqual({ error: cvRouterError.NOT_FOUND });
+
+    const cv = await CV.findById(userTwoCvOne._id);
+    expect(convertDatesToISOStrings(cv)).toMatchObject(userTwoCvOne);
+    expect(convertDatesToISOStrings(cv)).not.toMatchObject(testUpdates);
+  });
+
+  // cv does not exist
+  it('Should not apply updates on a cv from a different user', async () => {
+    const response = await request(app)
+      .patch(`/cvs/1234doesnotexist`)
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .send(testUpdates)
+      .expect(404);
+
+    expect(response.body).toEqual({ error: cvRouterError.NOT_FOUND });
+  });
+});

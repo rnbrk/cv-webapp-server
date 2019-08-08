@@ -8,7 +8,8 @@ const userRouterError = {
 };
 
 const cvRouterError = {
-  NOT_FOUND: 'Cannot continue: data not found'
+  NOT_FOUND: 'Cannot continue: data not found',
+  INTERNAL_SERVER_ERROR: 'Cannot continue: internal server error.'
 };
 
 const authError = {

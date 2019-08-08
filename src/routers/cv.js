@@ -3,6 +3,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const { CV } = require('../models/cv');
 const { cvRouterError } = require('../errorMessages/error');
+const { arrayContainsItemOfOtherArray } = require('../../src/utils/utils');
 
 const router = express.Router();
 
@@ -62,24 +63,37 @@ router.delete('/cvs/:id', auth, async (req, res) => {
 router.patch('/cvs/:id', auth, async (req, res) => {
   try {
     const updates = Object.keys(req.body);
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
 
-    const query = {
-      _id: req.params.id,
-      user: req.user._id
-    };
-
-    const cv = await CV.findOne(query);
     if (!cv) {
-      return res.status(400).send({ error: 'Could not update cv.' });
+      throw new Error();
     }
 
+    const ALLOWED_UPDATES = [
+      'title',
+      'profile',
+      'skills',
+      'jobs',
+      'studies',
+      'courses'
+    ];
+
+    const isValidOperation = arrayContainsItemOfOtherArray(
+      updates,
+      ALLOWED_UPDATES
+    );
+
+    if (!isValidOperation) {
+      return res.status(400).send({ error: userRouterError.INVALID_UPDATES });
+    }
     updates.forEach(update => {
       cv[update] = req.body[update];
     });
+
     const newCv = await cv.save();
     res.send(newCv);
   } catch (e) {
-    res.status(500).send();
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
   }
 });
 

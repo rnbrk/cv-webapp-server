@@ -25,10 +25,17 @@ const skillSchema = new mongoose.Schema({
   }
 });
 
+const dateToTimestamp = date => date.getTime() / 1000;
+const timestampToDate = timestamp => new Date(timestamp * 1000);
+
 const jobSchema = new mongoose.Schema({
   name: { type: String, default: '' },
-  startDate: { type: Date, default: new Date() },
-  endDate: { type: Date, default: new Date() },
+  startDate: {
+    type: Date
+  },
+  endDate: {
+    type: Date
+  },
   description: { type: String },
   responsibilities: [String]
 });
