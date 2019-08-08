@@ -354,3 +354,92 @@ describe('Update user (PATCH /users)', () => {
     });
   });
 });
+
+describe('Add/update user photo (POST /users/photo)', () => {
+  it('Should correctly add new photo', async () => {
+    await request(app)
+      .post('/users/photo')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .attach('photo', './tests/fixtures/chewbacca.jpg')
+      .expect(200);
+
+    const user = await User.findById(userOne._id);
+    expect(user.photo instanceof Buffer).toBe(true);
+  });
+
+  it('Should not add new photo when not authenticated', async () => {
+    const response = await request(app)
+      .post('/users/photo')
+      .attach('photo', './tests/fixtures/chewbacca.jpg')
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+
+  it('Should not add file other than photo', async () => {
+    const response = await request(app)
+      .post('/users/photo')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .attach('photo', './tests/fixtures/test.odt')
+      .expect(400);
+
+    expect(typeof response.body.error).toBe('string');
+
+    const user = await User.findById(userOne._id);
+    expect(user.photo instanceof Buffer).toBe(false);
+  });
+});
+
+describe('Delete user photo (DELETE /users/photo)', () => {
+  beforeEach(async () => {
+    await request(app)
+      .post('/users/photo')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .attach('photo', './tests/fixtures/chewbacca.jpg');
+  });
+
+  it('Should correctly delete photo', async () => {
+    await request(app)
+      .delete('/users/photo')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .attach('photo', './tests/fixtures/test.odt')
+      .expect(200);
+
+    const user = await User.findById(userOne._id);
+    expect(user.photo).toBeUndefined();
+    expect(user.photo instanceof Buffer).toBe(false);
+  });
+
+  it('Should not delete photo if not authorized', async () => {
+    const response = await request(app)
+      .delete('/users/photo')
+      .attach('photo', './tests/fixtures/test.odt')
+      .expect(401);
+
+    expect(response.body).toMatchObject({ error: authError.NOT_AUTHORIZED });
+  });
+});
+
+describe('Display user photo (GET /users/:id/photo)', () => {
+  it('Should correctly display photo', async () => {
+    await request(app)
+      .post('/users/photo')
+      .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+      .attach('photo', './tests/fixtures/chewbacca.jpg');
+
+    const response = await request(app)
+      .get(`/users/${userOne._id}/photo`)
+      .expect(200);
+
+    expect(response.body instanceof Buffer).toBe(true);
+  });
+
+  it('Should give 404 when photo does not exist', async () => {
+    const response = await request(app)
+      .get(`/users/123doesnotexist/photo`)
+      .expect(404);
+
+    expect(response.body).toEqual({ error: userRouterError.NOT_FOUND });
+    expect(response.body instanceof Buffer).toBe(false);
+  });
+});

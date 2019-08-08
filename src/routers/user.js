@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const sharp = require('sharp');
 
 const { User } = require('../models/user');
 const { CV } = require('../models/cv');
@@ -149,6 +151,72 @@ router.patch('/users', auth, async (req, res) => {
     res.send(req.user);
   } catch (e) {
     res.status(400).send({ error: userRouterError.INVALID_UPDATES });
+  }
+});
+
+/**
+ * Add/update user photo
+ */
+
+const photo = multer({
+  limits: { fileSize: 10000000 },
+  fileFilter(req, file, cb) {
+    const hasImageFileExtension = /([a-zA-Z0-9\s_\\.\-\(\):]+)\.(jpeg|jpg|png)$/.test(
+      file.originalname
+    );
+    const hasImageMimeType = /(image\/)(jpeg|jpg|png)$/.test(file.mimetype);
+    if (!hasImageFileExtension || !hasImageMimeType) {
+      return cb(
+        new Error('File should be an image file (jpeg or png).'),
+        undefined
+      );
+    }
+    cb(undefined, true);
+  }
+});
+
+router.post(
+  '/users/photo',
+  auth,
+  photo.single('photo'),
+  async (req, res) => {
+    const imageBuffer = await sharp(req.file.buffer)
+      .resize(300)
+      .toBuffer();
+
+    req.user.photo = imageBuffer;
+    await req.user.save();
+    res.send();
+  },
+  (error, req, res, next) => {
+    res.status(400).send({ error: error.message });
+  }
+);
+
+/**
+ * Delete user photo
+ */
+router.delete('/users/photo', auth, async (req, res) => {
+  req.user.photo = undefined;
+  await req.user.save();
+  res.send();
+});
+
+/**
+ * Show user avatar
+ */
+router.get('/users/:id/photo', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user || !user.photo) {
+      throw new Error();
+    }
+
+    res.set('Content-Type', 'image/png');
+    res.send(user.photo);
+  } catch (e) {
+    res.status(404).send({ error: userRouterError.NOT_FOUND });
   }
 });
 
