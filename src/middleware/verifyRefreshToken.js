@@ -2,16 +2,20 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models/user');
 const { authError } = require('../errorMessages/error');
 
-const auth = async (req, res, next) => {
+const verifyRefreshToken = async (req, res, next) => {
   try {
-    // verify token
-    const token = req.headers.authorization.replace('Bearer ', '');
-    const decoded = await jwt.verify(token, process.env.JWT_SECRET);
+    // verify refresh token
+    const refreshToken = req.headers.authorization.replace('Bearer ', '');
+    const decoded = await jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET
+    );
 
     // check if user has token
     const user = await User.findOne({
+      email: req.body.email,
       _id: decoded._id,
-      'tokens.token': token
+      'refreshTokens.token': refreshToken
     });
 
     if (!user) {
@@ -19,12 +23,13 @@ const auth = async (req, res, next) => {
     }
 
     // Supply user to other middlewares
+    req.id = user._id;
     req.user = user;
-    req.token = token;
+    req.refreshToken = refreshToken;
     next();
   } catch (e) {
     res.status(401).send({ error: authError.NOT_AUTHORIZED });
   }
 };
 
-module.exports = auth;
+module.exports = verifyRefreshToken;

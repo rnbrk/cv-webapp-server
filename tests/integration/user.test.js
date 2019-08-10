@@ -26,6 +26,9 @@ describe('Create new user (POST /users)', () => {
     // It should supply a JWT token
     expect(validator.isJWT(response.body.token)).toBe(true);
 
+    // Should supply JWT refreshToken
+    expect(validator.isJWT(response.body.refreshToken)).toBe(true);
+
     const user = await User.findOne({ email: payload.email });
     expect(user).not.toBeNull();
 
@@ -108,7 +111,8 @@ describe('Login user (POST /users/login)', () => {
 
     expect(response.body).toMatchObject({
       user: { email: payload.email },
-      token: user.tokens[1].token
+      token: user.tokens[1].token,
+      refreshToken: user.refreshTokens[1].token
     });
   });
 
@@ -336,6 +340,7 @@ describe('Update user (PATCH /users)', () => {
     };
     delete expectedResponse.password;
     delete expectedResponse.tokens;
+    delete expectedResponse.refreshTokens;
 
     expect(response.body).toMatchObject(expectedResponse);
   });
@@ -441,5 +446,50 @@ describe('Display user photo (GET /users/:id/photo)', () => {
 
     expect(response.body).toEqual({ error: userRouterError.NOT_FOUND });
     expect(response.body instanceof Buffer).toBe(false);
+  });
+});
+
+describe('Refresh token (POST /users/token)', () => {
+  it('Should send token when refreshToken and email are supplied', async () => {
+    const payload = { email: userOne.email };
+    const response = await request(app)
+      .post('/users/token')
+      .set('Authorization', `Bearer ${userOne.refreshTokens[0].token}`)
+      .send(payload)
+      .expect(200);
+
+    expect(response.body.password).toBeUndefined();
+
+    const user = await User.findById(userOne._id);
+
+    expect(response.body).toMatchObject({
+      token: user.tokens[1].token
+    });
+  });
+
+  it('Should not send token when not given refreshToken', async () => {
+    const payload = { email: userOne.email };
+    const response = await request(app)
+      .post('/users/token')
+      .send(payload)
+      .expect(401);
+
+    expect(response.body).toEqual({ error: authError.NOT_AUTHORIZED });
+
+    const user = await User.findById(userOne._id);
+    expect(user.tokens.length).toBe(userOne.tokens.length);
+  });
+
+  it('Should not send token without email address', async () => {
+    const response = await request(app)
+      .post('/users/token')
+      .set('Authorization', `Bearer ${userOne.refreshTokens[0].token}`)
+      .send()
+      .expect(401);
+
+    expect(response.body).toEqual({ error: authError.NOT_AUTHORIZED });
+
+    const user = await User.findById(userOne._id);
+    expect(user.tokens.length).toBe(userOne.tokens.length);
   });
 });

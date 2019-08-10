@@ -16,6 +16,12 @@ const userOne = {
     {
       token: jwt.sign({ _id: userOneId }, process.env.JWT_SECRET)
     }
+  ],
+
+  refreshTokens: [
+    {
+      token: jwt.sign({ _id: userOneId }, process.env.JWT_REFRESH_SECRET)
+    }
   ]
 };
 
@@ -30,6 +36,11 @@ const userTwo = {
     },
     {
       token: jwt.sign({ _id: userTwoId }, process.env.JWT_SECRET)
+    }
+  ],
+  refreshTokens: [
+    {
+      token: jwt.sign({ _id: userOneId }, process.env.JWT_REFRESH_SECRET)
     }
   ]
 };

@@ -6,6 +6,7 @@ const { User } = require('../models/user');
 const { CV } = require('../models/cv');
 
 const auth = require('../middleware/auth');
+const verifyRefreshToken = require('../middleware/verifyRefreshToken');
 const { arrayContainsItemOfOtherArray } = require('../../src/utils/utils');
 const { userRouterError } = require('../errorMessages/error');
 
@@ -25,11 +26,24 @@ router.post('/users', async (req, res) => {
 
     const user = await new User(req.body);
     const token = await user.createAuthToken();
-    res.status(201).send({ token, user });
+    const refreshToken = await user.createAuthToken(true);
+    res.status(201).send({ refreshToken, token, user });
   } catch (e) {
     res.status(400).send({
       error: userRouterError.INVALID_USER_DATA
     });
+  }
+});
+
+/**
+ * Refresh token
+ */
+router.post('/users/token', verifyRefreshToken, async (req, res) => {
+  try {
+    const token = await req.user.createAuthToken();
+    res.send({ token });
+  } catch (e) {
+    res.status(500).send();
   }
 });
 
@@ -43,7 +57,9 @@ router.post('/users/login', async (req, res) => {
       req.body.password
     );
     const token = await user.createAuthToken();
-    res.send({ token, user });
+    const refreshToken = await user.createAuthToken(true);
+
+    res.send({ refreshToken, token, user });
   } catch (e) {
     res.status(400).send({ error: userRouterError.INVALID_CREDENTIALS });
   }

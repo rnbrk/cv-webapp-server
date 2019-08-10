@@ -65,6 +65,14 @@ const userSchema = new mongoose.Schema(
         }
       }
     ],
+    refreshTokens: [
+      {
+        token: {
+          type: String,
+          required: true
+        }
+      }
+    ],
     photo: { type: Buffer }
   },
   { strict: 'throw', toJSON: { virtuals: true } }
@@ -79,10 +87,35 @@ userSchema.virtual('cvs', {
 /**
  * Generates and returns JSON web token and puts it in user.tokens array
  */
-userSchema.methods.createAuthToken = async function() {
+userSchema.methods.createAuthToken = async function(refreshToken = false) {
   const user = this;
-  const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET);
-  user.tokens.push({ token });
+
+  if (refreshToken) {
+    token = await jwt.sign(
+      { _id: user._id.toString() },
+      process.env.JWT_REFRESH_SECRET,
+      {
+        expiresIn: '1 minute'
+      }
+    );
+  }
+
+  if (!refreshToken) {
+    token = await jwt.sign(
+      { _id: user._id.toString() },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: '10 seconds'
+      }
+    );
+  }
+
+  if (refreshToken) {
+    user.refreshTokens.push({ token });
+  } else {
+    user.tokens.push({ token });
+  }
+
   await user.save();
   return token;
 };
@@ -99,8 +132,10 @@ userSchema.methods.toJSON = function() {
   const userObject = user.toObject();
   delete userObject.password;
   delete userObject.tokens;
+  delete userObject.refreshTokens;
   delete userObject.photo;
   delete userObject.id;
+  delete userObject.__v;
 
   const keys = Object.keys(userObject);
   keys.forEach(key => {
