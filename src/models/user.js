@@ -15,6 +15,9 @@ const userSchema = new mongoose.Schema(
       default: null,
       trim: true
     },
+    profession: {
+      type: String
+    },
     dateOfBirth: {
       type: Date,
       default: Date.now()
@@ -42,6 +45,17 @@ const userSchema = new mongoose.Schema(
       validate(val) {
         if (!validator.isEmail(val)) {
           throw new Error('This is not a valid email address.');
+        }
+      }
+    },
+    website: {
+      name: String,
+      link: {
+        type: String,
+        validate(val) {
+          if (!validator.isURL(val)) {
+            throw new Error('This is not a valid url.');
+          }
         }
       }
     },
@@ -87,6 +101,25 @@ userSchema.virtual('cvs', {
   localField: '_id',
   foreignField: 'user'
 });
+
+/**
+ * Combines and splits lastName and firstName into fullName with concatenation and splitting
+ * in order to migrate to a fullName field.
+ */
+userSchema
+  .virtual('fullName')
+  .get(function getFullname() {
+    const user = this;
+    return `${user.firstName} ${user.lastName}`;
+  })
+  .set(function setFullname(fullName) {
+    const user = this;
+    user.firstName = fullName
+      .split(' ')
+      .slice(0, -1)
+      .join(' ');
+    user.lastName = fullName.split(' ').slice(-1);
+  });
 
 /**
  * Generates and returns JSON web token and puts it in user.tokens array
