@@ -56,6 +56,7 @@ router.post('/users/login', async (req, res) => {
       req.body.email,
       req.body.password
     );
+
     const token = await user.createAuthToken();
     const refreshToken = await user.createAuthToken(true);
 
@@ -98,9 +99,7 @@ router.post('/users/logoutAll', auth, async (req, res) => {
  */
 router.get('/users/:id', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
-      .populate('cvs', 'title')
-      .exec();
+    const user = await User.findById(req.params.id);
 
     if (!user) {
       throw new Error();

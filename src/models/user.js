@@ -75,7 +75,11 @@ const userSchema = new mongoose.Schema(
     ],
     photo: { type: Buffer }
   },
-  { strict: 'throw', toJSON: { virtuals: true } }
+  {
+    strict: 'throw',
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
 
 userSchema.virtual('cvs', {
@@ -95,7 +99,7 @@ userSchema.methods.createAuthToken = async function(refreshToken = false) {
       { _id: user._id.toString() },
       process.env.JWT_REFRESH_SECRET,
       {
-        expiresIn: '1 minute'
+        expiresIn: '5 days'
       }
     );
   }
@@ -105,7 +109,7 @@ userSchema.methods.createAuthToken = async function(refreshToken = false) {
       { _id: user._id.toString() },
       process.env.JWT_SECRET,
       {
-        expiresIn: '10 seconds'
+        expiresIn: '1 days'
       }
     );
   }
@@ -164,7 +168,9 @@ userSchema.pre('save', async function(next) {
  * Finds user by email address, then checks plain text password with hashed stored password
  */
 userSchema.statics.findAndCheckCredentials = async (email, password) => {
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email })
+    .populate('cvs', 'title')
+    .exec();
 
   if (!user) {
     throw new Error('User cannot be authenticated');
