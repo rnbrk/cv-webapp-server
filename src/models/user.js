@@ -29,14 +29,7 @@ const userSchema = new mongoose.Schema(
     },
     phoneNumber: {
       type: String,
-      default: null,
-      validate(val) {
-        const isPhoneNumberOrNull =
-          val === null || (val.length === 10 && validator.isNumeric(val));
-        if (!isPhoneNumberOrNull) {
-          throw new Error('A phone number should be 10 numbers');
-        }
-      }
+      default: null
     },
     email: {
       required: true,
