@@ -5,6 +5,8 @@ const { CV } = require('../models/cv');
 const { cvRouterError } = require('../errorMessages/error');
 const { arrayContainsItemOfOtherArray } = require('../../src/utils/utils');
 
+const moment = require('moment');
+
 const router = express.Router();
 
 /**
@@ -12,8 +14,25 @@ const router = express.Router();
  */
 router.get('/cvs/:id', async (req, res) => {
   try {
-    const cv = await CV.findById(req.params.id);
-    res.send(cv);
+    const cv = await CV.findById(req.params.id).populate('user');
+
+    // There must be a cleaner way to get User data into CV.profile
+    // This takes the relevant data from the populated CV.user and adds it to CV.profile
+    const cvObject = cv.toObject();
+    cvObject.profile = {
+      ...cvObject.profile,
+      email: cvObject.user.email,
+      fullName: cvObject.user.fullName,
+      profession: cvObject.user.profession,
+      website: cvObject.user.website,
+      phoneNumber: cvObject.user.phoneNumber,
+      dateOfBirth: cvObject.user.dateofBirth
+    };
+
+    // replaces user object with its _id again. Undoes population
+    cvObject.user = cvObject.user._id;
+
+    res.send(cvObject);
   } catch (e) {
     res.status(404).send({
       error: cvRouterError.NOT_FOUND
@@ -65,9 +84,7 @@ router.patch('/cvs/:id', auth, async (req, res) => {
     const updates = Object.keys(req.body);
     const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
 
-    if (!cv) {
-      throw new Error();
-    }
+    if (!cv) throw new Error();
 
     const ALLOWED_UPDATES = [
       'title',
@@ -92,6 +109,82 @@ router.patch('/cvs/:id', auth, async (req, res) => {
 
     const newCv = await cv.save();
     res.send(newCv);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Add new job to CV
+ */
+
+// POST /cvs/:id/jobs
+router.post('/cvs/:id/jobs', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const listOfJobs = cv.jobs.list;
+
+    const oldestStartDate =
+      listOfJobs.reduce(
+        (oldestDate, job) =>
+          oldestDate === null ||
+          moment(job.startDate).isBefore(moment(oldestDate))
+            ? job.startDate
+            : oldestDate,
+        null
+      ) || moment('01-01-1970').toISOString();
+
+    listOfJobs.push({
+      name: 'Job title',
+      employerName: 'Employer name',
+      endDate: moment(oldestStartDate)
+        .subtract(1, 'month')
+        .toISOString(),
+      startDate: moment(oldestStartDate)
+        .subtract(1, 'year')
+        .toISOString(),
+      description: 'Job description',
+      responsibilities: ['First responsibility', 'Second responsibility']
+    });
+    const newJob = listOfJobs[listOfJobs.length - 1];
+    await cv.save();
+
+    res.status(201).send(newJob);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Delete job from CV
+ */
+router.delete('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const job = await cv.jobs.list.id(req.params.jobId).remove();
+    cv.save();
+    res.send(job);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Update job
+ */
+// TODO: PATCH /cvs/:id/jobs/:jobId
+router.patch('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
+  try {
+    const updates = Object.keys(req.body);
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const job = await cv.jobs.list.id(req.params.jobId);
+
+    updates.forEach(update => {
+      job[update] = req.body[update];
+    });
+
+    await cv.save();
+    res.send(job);
   } catch (e) {
     return res.status(404).send({ error: cvRouterError.NOT_FOUND });
   }

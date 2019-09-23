@@ -104,7 +104,7 @@ router.get('/users/:id', async (req, res) => {
     if (!user) {
       throw new Error();
     }
-    res.send(user);
+    res.send({ user });
   } catch (e) {
     res.status(404).send({
       error: userRouterError.NOT_FOUND
@@ -142,13 +142,14 @@ router.patch('/users', auth, async (req, res) => {
   }
 
   const ALLOWED_UPDATES = [
-    'firstName',
-    'lastName',
+    'fullName',
+    'profession',
     'dateOfBirth',
     'residence',
     'phoneNumber',
     'email',
-    'password'
+    'password',
+    'website'
   ];
 
   const isValidOperation = arrayContainsItemOfOtherArray(
@@ -163,7 +164,7 @@ router.patch('/users', auth, async (req, res) => {
   try {
     updates.forEach(update => (req.user[update] = req.body[update]));
     await req.user.save();
-    res.send(req.user);
+    res.send({ user: req.user });
   } catch (e) {
     res.status(400).send({ error: userRouterError.INVALID_UPDATES });
   }
@@ -218,7 +219,7 @@ router.delete('/users/photo', auth, async (req, res) => {
 });
 
 /**
- * Show user avatar
+ * Show user photo
  */
 router.get('/users/:id/photo', async (req, res) => {
   try {

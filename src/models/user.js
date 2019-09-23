@@ -5,16 +5,12 @@ const validator = require('validator');
 
 const userSchema = new mongoose.Schema(
   {
-    firstName: {
+    fullName: {
       type: String,
       default: null,
       trim: true
     },
-    lastName: {
-      type: String,
-      default: null,
-      trim: true
-    },
+
     profession: {
       type: String
     },
@@ -96,25 +92,6 @@ userSchema.virtual('cvs', {
 });
 
 /**
- * Combines and splits lastName and firstName into fullName with concatenation and splitting
- * in order to migrate to a fullName field.
- */
-userSchema
-  .virtual('fullName')
-  .get(function getFullname() {
-    const user = this;
-    return `${user.firstName} ${user.lastName}`;
-  })
-  .set(function setFullname(fullName) {
-    const user = this;
-    user.firstName = fullName
-      .split(' ')
-      .slice(0, -1)
-      .join(' ');
-    user.lastName = fullName.split(' ').slice(-1);
-  });
-
-/**
  * Generates and returns JSON web token and puts it in user.tokens array
  */
 userSchema.methods.createAuthToken = async function(refreshToken = false) {
@@ -135,7 +112,7 @@ userSchema.methods.createAuthToken = async function(refreshToken = false) {
       { _id: user._id.toString() },
       process.env.JWT_SECRET,
       {
-        expiresIn: '1 days'
+        expiresIn: '10 minutes'
       }
     );
   }

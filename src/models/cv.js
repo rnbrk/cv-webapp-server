@@ -78,6 +78,19 @@ const cvSchema = new mongoose.Schema(
       },
       list: [skillSchema]
     },
+
+    /**
+     * TODO:
+     *
+     * Jobs should be sorted from new to old (up to down)
+     * Job without date is sorted later than with date
+     * Jobs without date are sorted alphabetically on job title
+     * Job title is required
+     * endDate is only allowed if startDate is not empty
+     * endDate must be > than startDate
+     * dateRange of one job may not overlap dateRange of another job
+     */
+
     jobs: {
       title: {
         type: String,
@@ -109,7 +122,7 @@ const cvSchema = new mongoose.Schema(
       list: [courseSchema]
     }
   },
-  { strict: 'throw' }
+  {}
 );
 
 const CV = mongoose.model('CV', cvSchema);
