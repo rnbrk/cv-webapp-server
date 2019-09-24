@@ -191,8 +191,6 @@ router.patch('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
 /**
  * Add study
  */
-// POST '/cvs/:id/studies'
-
 router.post('/cvs/:id/studies', auth, async (req, res) => {
   try {
     const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
