@@ -249,4 +249,60 @@ router.patch('/cvs/:id/studies/:studyId', auth, async (req, res) => {
   }
 });
 
+/**
+ * Add course
+ */
+router.post('/cvs/:id/courses', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const listOfCourses = cv.courses.list;
+
+    listOfCourses.push({
+      name: '_Course name',
+      instituteName: 'Institute name'
+    });
+
+    const newCourse = listOfCourses[listOfCourses.length - 1];
+    await cv.save();
+
+    res.status(201).send(newCourse);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Delete course
+ */
+router.delete('/cvs/:id/courses/:courseId', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const course = await cv.courses.list.id(req.params.courseId).remove();
+    cv.save();
+    res.send(course);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Update course
+ */
+router.patch('/cvs/:id/courses/:courseId', auth, async (req, res) => {
+  try {
+    const updates = Object.keys(req.body);
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const course = await cv.courses.list.id(req.params.courseId);
+
+    updates.forEach(update => {
+      course[update] = req.body[update];
+    });
+
+    await cv.save();
+    res.send(course);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
 module.exports = router;
