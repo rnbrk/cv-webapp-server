@@ -118,7 +118,6 @@ router.patch('/cvs/:id', auth, async (req, res) => {
  * Add new job to CV
  */
 
-// POST /cvs/:id/jobs
 router.post('/cvs/:id/jobs', auth, async (req, res) => {
   try {
     const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
@@ -172,7 +171,6 @@ router.delete('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
 /**
  * Update job
  */
-// TODO: PATCH /cvs/:id/jobs/:jobId
 router.patch('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
   try {
     const updates = Object.keys(req.body);
@@ -185,6 +183,69 @@ router.patch('/cvs/:id/jobs/:jobId', auth, async (req, res) => {
 
     await cv.save();
     res.send(job);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Add study
+ */
+// POST '/cvs/:id/studies'
+
+router.post('/cvs/:id/studies', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const listOfStudies = cv.studies.list;
+
+    listOfStudies.push({
+      name: 'Education name',
+      startDate: moment()
+        .subtract(1, 'years')
+        .toISOString(),
+      endDate: moment().toISOString(),
+      instituteName: 'Institute name',
+      title: 'Title'
+    });
+
+    const newStudy = listOfStudies[listOfStudies.length - 1];
+    await cv.save();
+
+    res.status(201).send(newStudy);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Delete study
+ */
+router.delete('/cvs/:id/studies/:studyId', auth, async (req, res) => {
+  try {
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const study = await cv.studies.list.id(req.params.studyId).remove();
+    cv.save();
+    res.send(study);
+  } catch (e) {
+    return res.status(404).send({ error: cvRouterError.NOT_FOUND });
+  }
+});
+
+/**
+ * Update study
+ */
+router.patch('/cvs/:id/studies/:studyId', auth, async (req, res) => {
+  try {
+    const updates = Object.keys(req.body);
+    const cv = await CV.findOne({ _id: req.params.id, user: req.user._id });
+    const study = await cv.studies.list.id(req.params.studyId);
+
+    updates.forEach(update => {
+      study[update] = req.body[update];
+    });
+
+    await cv.save();
+    res.send(study);
   } catch (e) {
     return res.status(404).send({ error: cvRouterError.NOT_FOUND });
   }
