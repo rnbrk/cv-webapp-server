@@ -1,13 +1,453 @@
 const express = require('express');
+const fs = require('fs');
 
 const auth = require('../middleware/auth');
 const { CV } = require('../models/cv');
 const { cvRouterError } = require('../errorMessages/error');
 const { arrayContainsItemOfOtherArray } = require('../../src/utils/utils');
 
+const path = require('path');
+const PdfPrinter = require('pdfmake');
+
 const moment = require('moment');
 
 const router = express.Router();
+
+const doc = {
+  content: [
+    /**
+     * User profile
+     */
+    {
+      alignment: 'justify',
+      margin: [0, 0, 0, 20],
+      columns: [
+        [
+          {
+            margin: [0, 0, 0, 10],
+            stack: [
+              { text: 'Ron Broek', style: 'mainTitle', alignment: 'left' },
+              { text: 'Webdeveloper', style: 'sectionTitle', alignment: 'left' }
+            ]
+          },
+
+          { text: 'ron@web.dev', alignment: 'left' },
+          { text: '06 1111 222x', alignment: 'left' },
+          { text: 'www.ronbroek.com', alignment: 'left' }
+        ],
+        { text: 'Image here' }
+        // {
+        //   image: 'sampleImage.jpg',
+        //   width: 100,
+        //   height: 100,
+        //   alignment: 'right'
+        // }
+      ]
+    },
+
+    /**
+     * About me
+     */
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*'],
+        body: [
+          [
+            {
+              text: 'About me',
+              style: ['tableHeader', 'sectionTitle'],
+              margin: [0, 10, 0, 0]
+            }
+          ],
+          [
+            {
+              text:
+                "By default paragraphs are stacked one on top of (or actually - below) another.\nIt's possible however to split any paragraph (or even the whole document) into columns.\nHere we go with 2 star-sized columns, with justified text and gap set to 20:",
+              alignment: 'left',
+              margin: [0, 3, 0, 10]
+            }
+          ]
+        ]
+      },
+      layout: 'headerLineOnly'
+    },
+
+    /**
+     * Job experience
+     */
+
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*'],
+        body: [
+          [
+            {
+              text: 'Experience',
+              style: ['tableHeader', 'sectionTitle'],
+              margin: [0, 10, 0, 0]
+            }
+          ],
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                // Job title
+                {
+                  margin: [0, 0, 0, 10],
+                  columns: [
+                    [
+                      {
+                        text: 'Logistiek medewerker',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Bol.com',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [
+                      {
+                        text: 'November 2016 - januari 2019',
+                        alignment: 'right'
+                      }
+                    ]
+                  ]
+                },
+                // Job description
+                {
+                  text:
+                    "By default paragraphs are stacked one on top of (or actually - below) another.\nIt's possible however to split any paragraph (or even the whole document) into columns.\nHere we go with 2 star-sized columns, with justified text and gap set to 20:",
+                  alignment: 'left',
+                  margin: [0, 3, 0, 10]
+                },
+                // Job responsibilities
+                {
+                  ul: [
+                    'Aanspreekpunt voor al je vragen',
+                    'Rapporteren van issues in de keten d.m.v. analyses',
+                    'Stakeholder in logistieke IT-projecten'
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                // Job title
+                {
+                  margin: [0, 0, 0, 10],
+                  columns: [
+                    [
+                      {
+                        text: 'Redacteur ondertiteling',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'NPO',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [
+                      {
+                        text: 'September 2012 - augustus 2016',
+                        alignment: 'right'
+                      }
+                    ]
+                  ]
+                },
+                // Job description
+                {
+                  text:
+                    "By default paragraphs are stacked one on top of (or actually - below) another.\nIt's possible however to split any paragraph (or even the whole document) into columns.\nHere we go with 2 star-sized columns, with justified text and gap set to 20:",
+                  alignment: 'left',
+                  margin: [0, 3, 0, 10]
+                },
+                // Job responsibilities
+                {
+                  ul: [
+                    `Tv-programma's live ondertitelen`,
+                    'Voorbereiden van ondertiteling',
+                    'Onderhoud achterliggende systemen'
+                  ]
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      layout: 'lightHorizontalLines'
+    },
+
+    /**
+     * Education
+     */
+
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*'],
+        body: [
+          [
+            {
+              text: 'Education',
+              style: ['tableHeader', 'sectionTitle'],
+              margin: [0, 10, 0, 0]
+            }
+          ],
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'Master American Studies',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Universiteit van Amsterdam',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [{ text: '2009 - 2011', alignment: 'right' }]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'Bachelor Mediastudies',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Universiteit van Amsterdam',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [{ text: '2004 - 2008', alignment: 'right' }]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'Interaction design',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Universiteit van Amsterdam',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [{ text: '2007', alignment: 'right' }]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'Recht & Economie in Europa',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Universiteit van Amsterdam',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ],
+                    [{ text: '2009', alignment: 'right' }]
+                  ]
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      layout: 'headerLineOnly'
+    },
+
+    /**
+     * Courses / certifications
+     */
+
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*'],
+        body: [
+          [
+            {
+              text: 'Courses',
+              style: ['tableHeader', 'sectionTitle'],
+              margin: [0, 10, 0, 0]
+            }
+          ],
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'The Complete React Developer Course',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Andrew Mead / Udemy',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'The Complete Node Developer Course',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Universiteit van Amsterdam',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: `You Don't Know JS`,
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Kyle Simpson',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+
+          [
+            {
+              margin: [0, 15, 0, 15],
+              stack: [
+                {
+                  columns: [
+                    [
+                      {
+                        text: 'Clean Code',
+                        style: ['itemTitle'],
+                        alignment: 'left'
+                      },
+                      {
+                        text: 'Robert C. Martin',
+                        style: ['itemSubtitle'],
+                        alignment: 'left'
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      layout: 'headerLineOnly'
+    }
+  ],
+  styles: {
+    mainTitle: {
+      fontSize: 20,
+      bold: true
+    },
+    sectionTitle: {
+      fontSize: 16,
+      color: '#2196F3',
+      alignment: 'center'
+    },
+    itemTitle: {
+      fontSize: 14,
+      bold: true,
+      alignment: 'left'
+    },
+    itemSubtitle: {
+      fontSize: 14,
+      alignment: 'left'
+    }
+  },
+  defaultStyle: {
+    columnGap: 20,
+    font: 'Roboto'
+  }
+};
 
 /**
  * Display cv
@@ -26,7 +466,8 @@ router.get('/cvs/:id', async (req, res) => {
       profession: cvObject.user.profession,
       website: cvObject.user.website,
       phoneNumber: cvObject.user.phoneNumber,
-      dateOfBirth: cvObject.user.dateofBirth
+      dateOfBirth: cvObject.user.dateofBirth,
+      hasPhoto: !!cvObject.user.photo
     };
 
     // replaces user object with its _id again. Undoes population
@@ -34,6 +475,36 @@ router.get('/cvs/:id', async (req, res) => {
 
     res.send(cvObject);
   } catch (e) {
+    res.status(404).send({
+      error: cvRouterError.NOT_FOUND
+    });
+  }
+});
+
+/**
+ * Export cv to pdf
+ */
+router.get('/cvs/:id/pdf', (req, res) => {
+  try {
+    const fonts = {
+      Roboto: {
+        normal: path.resolve('fonts', 'Roboto-Regular.ttf'),
+        bold: path.resolve('fonts', 'Roboto-Bold.ttf'),
+        italics: path.resolve('fonts', 'Roboto-Italic.ttf'),
+        bolditalics: path.resolve('fonts', 'Roboto-BoldItalic.ttf')
+      }
+    };
+
+    const printer = new PdfPrinter(fonts);
+    const pdfDoc = printer.createPdfKitDocument(doc);
+
+    res.set('Content-type', 'application/pdf');
+    res.set('Content-disposition', 'inline; filename="cv.pdf"');
+
+    pdfDoc.end();
+    pdfDoc.pipe(res);
+  } catch (e) {
+    console.log(e);
     res.status(404).send({
       error: cvRouterError.NOT_FOUND
     });

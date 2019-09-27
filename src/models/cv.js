@@ -65,7 +65,7 @@ const cvSchema = new mongoose.Schema(
       },
       paragraph: {
         type: String,
-        default: ''
+        default: 'Profile description'
       }
     },
     skills: {
