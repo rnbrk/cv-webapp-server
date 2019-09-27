@@ -140,7 +140,6 @@ userSchema.methods.toJSON = function() {
   delete userObject.password;
   delete userObject.tokens;
   delete userObject.refreshTokens;
-  delete userObject.photo;
   delete userObject.id;
   delete userObject.__v;
 
